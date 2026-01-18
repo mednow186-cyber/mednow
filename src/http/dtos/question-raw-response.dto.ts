@@ -135,10 +135,10 @@ export class QuestionRawResponseDto {
 
   @ApiProperty({
     description: 'Status da questão',
-    enum: ['pending_review'],
+    enum: ['pending_review', 'approved'],
     example: 'pending_review',
   })
-  status: 'pending_review';
+  status: 'pending_review' | 'approved';
 
   @ApiProperty({
     description: 'Data de criação',

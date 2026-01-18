@@ -1,5 +1,5 @@
 export type SourceType = 'image' | 'pdf';
-export type QuestionRawStatus = 'pending_review';
+export type QuestionRawStatus = 'pending_review' | 'approved';
 
 export interface QuestionRaw {
   _id?: string;
@@ -16,4 +16,5 @@ export interface QuestionsRawRepositoryPort {
   save(questionRaw: QuestionRaw): Promise<void>;
   findAll(): Promise<QuestionRaw[]>;
   findById(id: string): Promise<QuestionRaw | null>;
+  update(id: string, updates: Partial<QuestionRaw>): Promise<QuestionRaw | null>;
 }

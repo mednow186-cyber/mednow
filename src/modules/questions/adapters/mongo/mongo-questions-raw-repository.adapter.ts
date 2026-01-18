@@ -41,6 +41,24 @@ export class MongoQuestionsRawRepositoryAdapter
     return this.mapDocumentToQuestionRaw(document);
   }
 
+  async update(id: string, updates: Partial<QuestionRaw>): Promise<QuestionRaw | null> {
+    const updateData: Partial<QuestionRaw> = { ...updates };
+    
+    delete updateData._id;
+    delete updateData.correlationId;
+    delete updateData.createdAt;
+
+    const document = await this.questionRawModel
+      .findByIdAndUpdate(id, updateData, { new: true })
+      .exec();
+
+    if (!document) {
+      return null;
+    }
+
+    return this.mapDocumentToQuestionRaw(document);
+  }
+
   private mapDocumentToQuestionRaw(doc: QuestionRawDocument): QuestionRaw {
     return {
       _id: doc._id.toString(),

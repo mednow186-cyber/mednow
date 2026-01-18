@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { ProcessQuestionsUseCase } from './core/application/use-cases/process-questions.use-case';
 import { ConsumeQuestionsUseCase } from './core/application/use-cases/consume-questions.use-case';
 import { GetQuestionsUseCase } from './core/application/use-cases/get-questions.use-case';
+import { UpdateQuestionUseCase } from './core/application/use-cases/update-question.use-case';
 import { AmqpQueueAdapter } from './adapters/amqp/amqp-queue.adapter';
 import { AmqpQueueConsumerAdapter } from './adapters/amqp/amqp-queue-consumer.adapter';
 import { OpenAiGptAdapter } from './adapters/openai/openai-gpt.adapter';
@@ -29,6 +30,7 @@ import { QuestionsConsumerService } from './questions-consumer.service';
     ProcessQuestionsUseCase,
     ConsumeQuestionsUseCase,
     GetQuestionsUseCase,
+    UpdateQuestionUseCase,
     QuestionsConsumerService,
     {
       provide: 'QueuePort',
@@ -51,6 +53,6 @@ import { QuestionsConsumerService } from './questions-consumer.service';
       useFactory: () => new NestLoggerAdapter('QuestionsModule'),
     },
   ],
-  exports: [ProcessQuestionsUseCase, GetQuestionsUseCase],
+  exports: [ProcessQuestionsUseCase, GetQuestionsUseCase, UpdateQuestionUseCase],
 })
 export class QuestionsModule {}

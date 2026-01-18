@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Put,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,9 +18,11 @@ import {
 } from '@nestjs/swagger';
 import { ProcessQuestionsUseCase } from '../../modules/questions/core/application/use-cases/process-questions.use-case';
 import { GetQuestionsUseCase } from '../../modules/questions/core/application/use-cases/get-questions.use-case';
+import { UpdateQuestionUseCase } from '../../modules/questions/core/application/use-cases/update-question.use-case';
 import { QuestionRaw } from '../../modules/questions/core/application/ports/questions-raw-repository.port';
 import { CreateQuestionsRequestDto } from '../dtos/create-questions-request.dto';
 import { CreateQuestionsResponseDto } from '../dtos/create-questions-response.dto';
+import { UpdateQuestionRequestDto } from '../dtos/update-question-request.dto';
 import { QuestionRawResponseDto } from '../dtos/question-raw-response.dto';
 
 @ApiTags('questions')
@@ -28,6 +31,7 @@ export class QuestionsController {
   constructor(
     private readonly processQuestionsUseCase: ProcessQuestionsUseCase,
     private readonly getQuestionsUseCase: GetQuestionsUseCase,
+    private readonly updateQuestionUseCase: UpdateQuestionUseCase,
   ) {}
 
   @Post()
@@ -132,6 +136,55 @@ export class QuestionsController {
     }
 
     return this.mapToResponseDto(question);
+  }
+
+  @Put(':id')
+  @ApiOperation({
+    summary: 'Atualizar questão',
+    description: 'Atualiza uma questão existente pelo seu ID',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'ID da questão a ser atualizada',
+    example: '696d15d7d5eb39e8296e120b',
+  })
+  @ApiBody({ type: UpdateQuestionRequestDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Questão atualizada com sucesso',
+    type: QuestionRawResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Dados inválidos fornecidos',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Questão não encontrada',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Erro interno do servidor',
+  })
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateQuestionRequestDto,
+  ): Promise<QuestionRawResponseDto> {
+    const result = await this.updateQuestionUseCase.execute({
+      id,
+      ...updateDto,
+    });
+
+    if (result.isFailure()) {
+      const error = result.getError();
+      if (error.message === 'Question not found') {
+        throw new HttpException(error.message, HttpStatus.NOT_FOUND);
+      }
+      throw new HttpException(error.message, HttpStatus.BAD_REQUEST);
+    }
+
+    const updatedQuestion = result.getValue();
+    return this.mapToResponseDto(updatedQuestion);
   }
 
   private mapToResponseDto(question: QuestionRaw): QuestionRawResponseDto {

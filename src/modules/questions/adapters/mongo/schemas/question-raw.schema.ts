@@ -20,8 +20,8 @@ export class QuestionRaw {
   @Prop({ required: true, type: Object })
   gptResponse: unknown;
 
-  @Prop({ required: true, enum: ['pending_review'], index: true })
-  status: 'pending_review';
+  @Prop({ required: true, enum: ['pending_review', 'approved'], index: true })
+  status: 'pending_review' | 'approved';
 
   @Prop({ required: true, index: true })
   createdAt: Date;
