@@ -89,6 +89,17 @@ export class ConsumeQuestionsUseCase {
       const errorContext =
         error instanceof Error && error.stack ? error.stack : undefined;
 
+      const isUnsupportedFileType = errorMessage.includes('Unsupported file type');
+      const isInvalidUrl = errorMessage.includes('Invalid URL');
+
+      if (isUnsupportedFileType || isInvalidUrl) {
+        this.logger.warn(
+          `Skipping message with unrecoverable error: correlationId=${correlationId}, error=${errorMessage}`,
+          'ConsumeQuestionsUseCase',
+        );
+        return;
+      }
+
       if (
         errorMessage.includes('GPT') ||
         errorMessage.includes('OpenAI') ||

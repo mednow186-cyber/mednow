@@ -38,11 +38,17 @@ import { QuestionsConsumerService } from './questions-consumer.service';
     },
     {
       provide: 'QueueConsumerPort',
-      useClass: AmqpQueueConsumerAdapter,
+      useFactory: (logger: Logger) => {
+        return new AmqpQueueConsumerAdapter(logger);
+      },
+      inject: ['Logger'],
     },
     {
       provide: 'GptServicePort',
-      useClass: OpenAiGptAdapter,
+      useFactory: (logger: Logger) => {
+        return new OpenAiGptAdapter(logger);
+      },
+      inject: ['Logger'],
     },
     {
       provide: 'QuestionsRawRepositoryPort',

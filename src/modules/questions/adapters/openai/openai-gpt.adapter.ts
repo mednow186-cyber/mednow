@@ -1,16 +1,21 @@
+import { Inject } from '@nestjs/common';
 import OpenAI from 'openai';
 import {
   GptServicePort,
   GptProcessRequest,
   GptResponse,
 } from '../../core/application/ports/gpt-service.port';
+import { Logger } from '../../../../building-blocks/observability/logger.interface';
 
 export class OpenAiGptAdapter implements GptServicePort {
   private readonly client: OpenAI;
   private readonly model: string;
   private readonly timeout: number;
 
-  constructor() {
+  constructor(
+    @Inject('Logger')
+    private readonly logger: Logger,
+  ) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY environment variable is required');
@@ -27,10 +32,21 @@ export class OpenAiGptAdapter implements GptServicePort {
       timeout: this.timeout,
       maxRetries: 0,
     });
+
+    this.logger.info(
+      `OpenAI GPT adapter initialized: model=${this.model}, timeout=${this.timeout}ms`,
+      'OpenAiGptAdapter',
+    );
   }
 
   async processQuestion(request: GptProcessRequest): Promise<GptResponse> {
     const { imageUrl, fileType, content, notes } = request;
+    const startTime = Date.now();
+
+    this.logger.debug(
+      `Processing question with GPT: model=${this.model}, fileType=${fileType}, imageUrl=${imageUrl}, hasContent=${!!content}, hasNotes=${!!notes}`,
+      'OpenAiGptAdapter',
+    );
 
     const promptParts: string[] = [
       `Analise este arquivo ${fileType === 'image' ? 'de imagem' : 'PDF'} e extraia os dados da questão em formato JSON estruturado.`,
@@ -67,6 +83,11 @@ export class OpenAiGptAdapter implements GptServicePort {
     ];
 
     try {
+      this.logger.debug(
+        `Calling OpenAI API: model=${this.model}, promptLength=${promptParts.join('').length}`,
+        'OpenAiGptAdapter',
+      );
+
       const completion = await this.client.chat.completions.create({
         model: this.model,
         messages,
@@ -75,26 +96,90 @@ export class OpenAiGptAdapter implements GptServicePort {
 
       const responseContent = completion.choices[0]?.message?.content;
       if (!responseContent) {
-        throw new Error('Empty response from GPT');
+        const error = new Error('Empty response from GPT');
+        this.logger.error(
+          `OpenAI returned empty response: model=${this.model}, completionId=${completion.id || 'unknown'}`,
+          undefined,
+          'OpenAiGptAdapter',
+        );
+        throw error;
       }
 
-      const parsedContent = JSON.parse(responseContent);
+      let parsedContent: unknown;
+      try {
+        parsedContent = JSON.parse(responseContent);
+      } catch (parseError) {
+        const parseErrorMessage =
+          parseError instanceof Error
+            ? parseError.message
+            : 'Unknown parse error';
+        this.logger.error(
+          `Failed to parse GPT response as JSON: model=${this.model}, responseLength=${responseContent.length}, error=${parseErrorMessage}`,
+          parseError instanceof Error ? parseError.stack : undefined,
+          'OpenAiGptAdapter',
+        );
+        throw new Error(`Invalid JSON response from GPT: ${parseErrorMessage}`);
+      }
+
+      const processingTime = Date.now() - startTime;
+      this.logger.info(
+        `GPT processing completed successfully: model=${this.model}, processingTime=${processingTime}ms, completionId=${completion.id || 'unknown'}, responseLength=${responseContent.length}`,
+        'OpenAiGptAdapter',
+      );
 
       return {
         content: parsedContent,
       };
     } catch (error) {
+      const processingTime = Date.now() - startTime;
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
+      const errorStack =
+        error instanceof Error && error.stack ? error.stack : undefined;
+
       if (error instanceof OpenAI.APIError) {
+        this.logger.error(
+          `OpenAI API error: model=${this.model}, status=${error.status}, code=${error.code || 'unknown'}, message=${error.message}, processingTime=${processingTime}ms`,
+          errorStack,
+          'OpenAiGptAdapter',
+        );
         throw new Error(
           `OpenAI API error: ${error.message} (status: ${error.status})`,
         );
       }
+
       if (error instanceof Error) {
         if (error.message.includes('timeout')) {
+          this.logger.error(
+            `GPT request timeout: model=${this.model}, timeout=${this.timeout}ms, processingTime=${processingTime}ms`,
+            errorStack,
+            'OpenAiGptAdapter',
+          );
           throw new Error(`GPT timeout after ${this.timeout}ms`);
         }
+
+        if (error.message.includes('JSON')) {
+          this.logger.error(
+            `GPT response parsing error: model=${this.model}, processingTime=${processingTime}ms`,
+            errorStack,
+            'OpenAiGptAdapter',
+          );
+        } else {
+          this.logger.error(
+            `Unexpected error calling GPT: model=${this.model}, error=${errorMessage}, processingTime=${processingTime}ms`,
+            errorStack,
+            'OpenAiGptAdapter',
+          );
+        }
+
         throw error;
       }
+
+      this.logger.error(
+        `Unknown error calling GPT: model=${this.model}, processingTime=${processingTime}ms`,
+        undefined,
+        'OpenAiGptAdapter',
+      );
       throw new Error('Unknown error calling GPT');
     }
   }

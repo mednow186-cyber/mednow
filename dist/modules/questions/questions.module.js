@@ -42,11 +42,17 @@ exports.QuestionsModule = QuestionsModule = __decorate([
             },
             {
                 provide: 'QueueConsumerPort',
-                useClass: amqp_queue_consumer_adapter_1.AmqpQueueConsumerAdapter,
+                useFactory: (logger) => {
+                    return new amqp_queue_consumer_adapter_1.AmqpQueueConsumerAdapter(logger);
+                },
+                inject: ['Logger'],
             },
             {
                 provide: 'GptServicePort',
-                useClass: openai_gpt_adapter_1.OpenAiGptAdapter,
+                useFactory: (logger) => {
+                    return new openai_gpt_adapter_1.OpenAiGptAdapter(logger);
+                },
+                inject: ['Logger'],
             },
             {
                 provide: 'QuestionsRawRepositoryPort',
