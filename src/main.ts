@@ -23,6 +23,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addTag('questions', 'Operações relacionadas a questões')
     .addTag('health', 'Verificação de saúde da API')
+    .addTag('auth', 'Operações de autenticação e autorização')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

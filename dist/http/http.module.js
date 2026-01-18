@@ -10,14 +10,16 @@ exports.HttpModule = void 0;
 const common_1 = require("@nestjs/common");
 const healthcheck_controller_1 = require("./controllers/healthcheck.controller");
 const questions_controller_1 = require("./controllers/questions.controller");
+const auth_controller_1 = require("./controllers/auth.controller");
 const questions_module_1 = require("../modules/questions/questions.module");
+const identity_module_1 = require("../modules/identity/identity.module");
 let HttpModule = class HttpModule {
 };
 exports.HttpModule = HttpModule;
 exports.HttpModule = HttpModule = __decorate([
     (0, common_1.Module)({
-        imports: [questions_module_1.QuestionsModule],
-        controllers: [healthcheck_controller_1.HealthcheckController, questions_controller_1.QuestionsController],
+        imports: [questions_module_1.QuestionsModule, identity_module_1.IdentityModule],
+        controllers: [healthcheck_controller_1.HealthcheckController, questions_controller_1.QuestionsController, auth_controller_1.AuthController],
     })
 ], HttpModule);
 //# sourceMappingURL=http.module.js.map

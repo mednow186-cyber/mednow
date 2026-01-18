@@ -42,12 +42,19 @@ const nestjs_api_reference_1 = require("@scalar/nestjs-api-reference");
 const app_module_1 = require("./app.module");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
+    app.enableCors({
+        origin: '*',
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: false,
+    });
     const config = new swagger_1.DocumentBuilder()
         .setTitle('Serverless Questions API')
         .setDescription('API para processamento e consulta de questões')
         .setVersion('1.0')
         .addTag('questions', 'Operações relacionadas a questões')
         .addTag('health', 'Verificação de saúde da API')
+        .addTag('auth', 'Operações de autenticação e autorização')
         .build();
     const document = swagger_1.SwaggerModule.createDocument(app, config);
     app.use('/api', (0, nestjs_api_reference_1.apiReference)({
