@@ -9,57 +9,69 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateQuestionRequestDto = void 0;
+exports.UpdateQuestionRequestDto = exports.ProcessingStatusUpdateDto = void 0;
 const swagger_1 = require("@nestjs/swagger");
-const question_raw_response_dto_1 = require("./question-raw-response.dto");
+class ProcessingStatusUpdateDto {
+}
+exports.ProcessingStatusUpdateDto = ProcessingStatusUpdateDto;
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Status do processamento',
+        enum: ['pending', 'classified', 'partial'],
+        required: false,
+        example: 'classified',
+    }),
+    __metadata("design:type", String)
+], ProcessingStatusUpdateDto.prototype, "status", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Data de classificação',
+        required: false,
+        example: '2026-01-18T17:18:15.074Z',
+    }),
+    __metadata("design:type", Date)
+], ProcessingStatusUpdateDto.prototype, "classifiedAt", void 0);
+__decorate([
+    (0, swagger_1.ApiProperty)({
+        description: 'Modelo usado para classificação',
+        required: false,
+        example: 'gpt-4o',
+    }),
+    __metadata("design:type", String)
+], ProcessingStatusUpdateDto.prototype, "model", void 0);
 class UpdateQuestionRequestDto {
 }
 exports.UpdateQuestionRequestDto = UpdateQuestionRequestDto;
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'URL da imagem da questão',
+        description: 'Fonte da questão (URL da imagem)',
         required: false,
         example: 'https://example.com/image.png',
     }),
     __metadata("design:type", String)
-], UpdateQuestionRequestDto.prototype, "imageUrl", void 0);
+], UpdateQuestionRequestDto.prototype, "source", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Tipo da fonte',
-        enum: ['image', 'pdf'],
+        description: 'Texto bruto extraído',
         required: false,
-        example: 'image',
+        example: 'Raw text extracted from the image...',
     }),
     __metadata("design:type", String)
-], UpdateQuestionRequestDto.prototype, "sourceType", void 0);
+], UpdateQuestionRequestDto.prototype, "raw_text", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Payload original da requisição',
-        type: Object,
+        description: 'Status do processamento',
+        type: ProcessingStatusUpdateDto,
         required: false,
-        example: {
-            imageUrl: 'https://example.com/image.png',
-            content: 'Conteúdo atualizado',
-            notes: 'Notas atualizadas',
-        },
     }),
-    __metadata("design:type", Object)
-], UpdateQuestionRequestDto.prototype, "originalPayload", void 0);
+    __metadata("design:type", ProcessingStatusUpdateDto)
+], UpdateQuestionRequestDto.prototype, "processing", void 0);
 __decorate([
     (0, swagger_1.ApiProperty)({
-        description: 'Resposta do GPT processada',
-        type: Object,
+        description: 'Lista de questões processadas',
+        type: Array,
         required: false,
     }),
-    __metadata("design:type", question_raw_response_dto_1.GptResponseDto)
-], UpdateQuestionRequestDto.prototype, "gptResponse", void 0);
-__decorate([
-    (0, swagger_1.ApiProperty)({
-        description: 'Status da questão',
-        enum: ['pending_review', 'approved'],
-        required: false,
-        example: 'pending_review',
-    }),
-    __metadata("design:type", String)
-], UpdateQuestionRequestDto.prototype, "status", void 0);
+    __metadata("design:type", Array)
+], UpdateQuestionRequestDto.prototype, "questions", void 0);
 //# sourceMappingURL=update-question-request.dto.js.map

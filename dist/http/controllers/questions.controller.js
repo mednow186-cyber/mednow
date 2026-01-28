@@ -21,7 +21,7 @@ const update_question_use_case_1 = require("../../modules/questions/core/applica
 const create_questions_request_dto_1 = require("../dtos/create-questions-request.dto");
 const create_questions_response_dto_1 = require("../dtos/create-questions-response.dto");
 const update_question_request_dto_1 = require("../dtos/update-question-request.dto");
-const question_raw_response_dto_1 = require("../dtos/question-raw-response.dto");
+const question_processing_response_dto_1 = require("../dtos/question-processing-response.dto");
 let QuestionsController = class QuestionsController {
     constructor(processQuestionsUseCase, getQuestionsUseCase, updateQuestionUseCase) {
         this.processQuestionsUseCase = processQuestionsUseCase;
@@ -75,13 +75,43 @@ let QuestionsController = class QuestionsController {
     mapToResponseDto(question) {
         return {
             _id: question._id || '',
-            correlationId: question.correlationId,
-            imageUrl: question.imageUrl,
-            sourceType: question.sourceType,
-            originalPayload: question.originalPayload,
-            gptResponse: question.gptResponse,
-            status: question.status,
-            createdAt: question.createdAt.toISOString(),
+            source: question.source,
+            raw_text: question.raw_text,
+            processing: {
+                status: question.processing.status,
+                classifiedAt: question.processing.classifiedAt?.toISOString(),
+                model: question.processing.model,
+            },
+            questions: question.questions.map((q) => ({
+                questionNumber: q.questionNumber,
+                type: q.type,
+                question: {
+                    text: q.question.text,
+                    alternatives: q.question.alternatives.map((alt) => ({
+                        letter: alt.letter,
+                        text: alt.text,
+                    })),
+                },
+                answer: {
+                    letter: q.answer.letter,
+                    text: q.answer.text,
+                    explanation: q.answer.explanation,
+                    source: q.answer.source,
+                },
+                classification: q.classification
+                    ? {
+                        area: q.classification.area,
+                        subarea: q.classification.subarea,
+                        theme: q.classification.theme,
+                        difficulty: q.classification.difficulty,
+                        keywords: q.classification.keywords,
+                    }
+                    : undefined,
+                processing: {
+                    status: q.processing.status,
+                    error: q.processing.error,
+                },
+            })),
         };
     }
 };
@@ -116,12 +146,12 @@ __decorate([
     (0, common_1.Get)(),
     (0, swagger_1.ApiOperation)({
         summary: 'Listar todas as questões',
-        description: 'Retorna todas as questões processadas e persistidas',
+        description: 'Retorna todas as questões processadas da collection questions_processing',
     }),
     (0, swagger_1.ApiResponse)({
         status: 200,
         description: 'Lista de questões retornada com sucesso',
-        type: [question_raw_response_dto_1.QuestionRawResponseDto],
+        type: [question_processing_response_dto_1.QuestionProcessingResponseDto],
     }),
     (0, swagger_1.ApiResponse)({
         status: 500,
@@ -135,7 +165,7 @@ __decorate([
     (0, common_1.Get)(':id'),
     (0, swagger_1.ApiOperation)({
         summary: 'Buscar questão por ID',
-        description: 'Retorna uma questão específica pelo seu ID',
+        description: 'Retorna uma questão específica pelo seu ID da collection questions_processing',
     }),
     (0, swagger_1.ApiParam)({
         name: 'id',
@@ -145,7 +175,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({
         status: 200,
         description: 'Questão encontrada com sucesso',
-        type: question_raw_response_dto_1.QuestionRawResponseDto,
+        type: question_processing_response_dto_1.QuestionProcessingResponseDto,
     }),
     (0, swagger_1.ApiResponse)({
         status: 404,
@@ -164,7 +194,7 @@ __decorate([
     (0, common_1.Put)(':id'),
     (0, swagger_1.ApiOperation)({
         summary: 'Atualizar questão',
-        description: 'Atualiza uma questão existente pelo seu ID',
+        description: 'Atualiza uma questão existente pelo seu ID na collection questions_processing',
     }),
     (0, swagger_1.ApiParam)({
         name: 'id',
@@ -175,7 +205,7 @@ __decorate([
     (0, swagger_1.ApiResponse)({
         status: 200,
         description: 'Questão atualizada com sucesso',
-        type: question_raw_response_dto_1.QuestionRawResponseDto,
+        type: question_processing_response_dto_1.QuestionProcessingResponseDto,
     }),
     (0, swagger_1.ApiResponse)({
         status: 400,

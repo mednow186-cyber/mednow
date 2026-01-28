@@ -19,11 +19,11 @@ import {
 import { ProcessQuestionsUseCase } from '../../modules/questions/core/application/use-cases/process-questions.use-case';
 import { GetQuestionsUseCase } from '../../modules/questions/core/application/use-cases/get-questions.use-case';
 import { UpdateQuestionUseCase } from '../../modules/questions/core/application/use-cases/update-question.use-case';
-import { QuestionRaw } from '../../modules/questions/core/application/ports/questions-raw-repository.port';
+import { QuestionProcessing } from '../../modules/questions/core/application/ports/questions-processing-repository.port';
 import { CreateQuestionsRequestDto } from '../dtos/create-questions-request.dto';
 import { CreateQuestionsResponseDto } from '../dtos/create-questions-response.dto';
 import { UpdateQuestionRequestDto } from '../dtos/update-question-request.dto';
-import { QuestionRawResponseDto } from '../dtos/question-raw-response.dto';
+import { QuestionProcessingResponseDto } from '../dtos/question-processing-response.dto';
 
 @ApiTags('questions')
 @Controller('questions')
@@ -72,18 +72,18 @@ export class QuestionsController {
   @Get()
   @ApiOperation({
     summary: 'Listar todas as questões',
-    description: 'Retorna todas as questões processadas e persistidas',
+    description: 'Retorna todas as questões processadas da collection questions_processing',
   })
   @ApiResponse({
     status: 200,
     description: 'Lista de questões retornada com sucesso',
-    type: [QuestionRawResponseDto],
+    type: [QuestionProcessingResponseDto],
   })
   @ApiResponse({
     status: 500,
     description: 'Erro interno do servidor',
   })
-  async findAll(): Promise<QuestionRawResponseDto[]> {
+  async findAll(): Promise<QuestionProcessingResponseDto[]> {
     const result = await this.getQuestionsUseCase.findAll();
 
     if (result.isFailure()) {
@@ -94,13 +94,15 @@ export class QuestionsController {
     }
 
     const questions = result.getValue();
-    return questions.map((question: QuestionRaw) => this.mapToResponseDto(question));
+    return questions.map((question: QuestionProcessing) =>
+      this.mapToResponseDto(question),
+    );
   }
 
   @Get(':id')
   @ApiOperation({
     summary: 'Buscar questão por ID',
-    description: 'Retorna uma questão específica pelo seu ID',
+    description: 'Retorna uma questão específica pelo seu ID da collection questions_processing',
   })
   @ApiParam({
     name: 'id',
@@ -110,7 +112,7 @@ export class QuestionsController {
   @ApiResponse({
     status: 200,
     description: 'Questão encontrada com sucesso',
-    type: QuestionRawResponseDto,
+    type: QuestionProcessingResponseDto,
   })
   @ApiResponse({
     status: 404,
@@ -120,7 +122,9 @@ export class QuestionsController {
     status: 500,
     description: 'Erro interno do servidor',
   })
-  async findById(@Param('id') id: string): Promise<QuestionRawResponseDto> {
+  async findById(
+    @Param('id') id: string,
+  ): Promise<QuestionProcessingResponseDto> {
     const result = await this.getQuestionsUseCase.findById(id);
 
     if (result.isFailure()) {
@@ -141,7 +145,7 @@ export class QuestionsController {
   @Put(':id')
   @ApiOperation({
     summary: 'Atualizar questão',
-    description: 'Atualiza uma questão existente pelo seu ID',
+    description: 'Atualiza uma questão existente pelo seu ID na collection questions_processing',
   })
   @ApiParam({
     name: 'id',
@@ -152,7 +156,7 @@ export class QuestionsController {
   @ApiResponse({
     status: 200,
     description: 'Questão atualizada com sucesso',
-    type: QuestionRawResponseDto,
+    type: QuestionProcessingResponseDto,
   })
   @ApiResponse({
     status: 400,
@@ -169,7 +173,7 @@ export class QuestionsController {
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateQuestionRequestDto,
-  ): Promise<QuestionRawResponseDto> {
+  ): Promise<QuestionProcessingResponseDto> {
     const result = await this.updateQuestionUseCase.execute({
       id,
       ...updateDto,
@@ -187,16 +191,48 @@ export class QuestionsController {
     return this.mapToResponseDto(updatedQuestion);
   }
 
-  private mapToResponseDto(question: QuestionRaw): QuestionRawResponseDto {
+  private mapToResponseDto(
+    question: QuestionProcessing,
+  ): QuestionProcessingResponseDto {
     return {
       _id: question._id || '',
-      correlationId: question.correlationId,
-      imageUrl: question.imageUrl,
-      sourceType: question.sourceType,
-      originalPayload: question.originalPayload,
-      gptResponse: question.gptResponse as QuestionRawResponseDto['gptResponse'],
-      status: question.status,
-      createdAt: question.createdAt.toISOString(),
+      source: question.source,
+      raw_text: question.raw_text,
+      processing: {
+        status: question.processing.status,
+        classifiedAt: question.processing.classifiedAt?.toISOString(),
+        model: question.processing.model,
+      },
+      questions: question.questions.map((q) => ({
+        questionNumber: q.questionNumber,
+        type: q.type,
+        question: {
+          text: q.question.text,
+          alternatives: q.question.alternatives.map((alt) => ({
+            letter: alt.letter,
+            text: alt.text,
+          })),
+        },
+        answer: {
+          letter: q.answer.letter,
+          text: q.answer.text,
+          explanation: q.answer.explanation,
+          source: q.answer.source,
+        },
+        classification: q.classification
+          ? {
+              area: q.classification.area,
+              subarea: q.classification.subarea,
+              theme: q.classification.theme,
+              difficulty: q.classification.difficulty,
+              keywords: q.classification.keywords,
+            }
+          : undefined,
+        processing: {
+          status: q.processing.status,
+          error: q.processing.error,
+        },
+      })),
     };
   }
 }

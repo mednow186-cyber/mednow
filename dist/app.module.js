@@ -12,6 +12,11 @@ const mongoose_1 = require("@nestjs/mongoose");
 const http_module_1 = require("./http/http.module");
 const identity_module_1 = require("./modules/identity/identity.module");
 const questions_module_1 = require("./modules/questions/questions.module");
+function getQuestionsDbUri() {
+    const baseUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+    const uriWithoutDb = baseUri.replace(/\/[^/]*$/, '');
+    return `${uriWithoutDb}/questions_db`;
+}
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -19,6 +24,9 @@ exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
             mongoose_1.MongooseModule.forRoot(process.env.MONGODB_URI || 'mongodb://localhost:27017/questions'),
+            mongoose_1.MongooseModule.forRoot(getQuestionsDbUri(), {
+                connectionName: 'questions_db',
+            }),
             http_module_1.HttpModule,
             identity_module_1.IdentityModule,
             questions_module_1.QuestionsModule,

@@ -1,15 +1,45 @@
 import { Result } from '../../../../../building-blocks/result/result';
-import { QuestionsRawRepositoryPort, QuestionRaw } from '../ports/questions-raw-repository.port';
+import { QuestionsProcessingRepositoryPort, QuestionProcessing } from '../ports/questions-processing-repository.port';
 export interface UpdateQuestionRequest {
     id: string;
-    imageUrl?: string;
-    sourceType?: 'image' | 'pdf';
-    originalPayload?: Record<string, unknown>;
-    gptResponse?: unknown;
-    status?: 'pending_review' | 'approved';
+    source?: string;
+    raw_text?: string;
+    processing?: {
+        status?: 'pending' | 'classified' | 'partial';
+        classifiedAt?: Date;
+        model?: string;
+    };
+    questions?: Array<{
+        questionNumber: number;
+        type: 'multiple_choice' | 'descriptive';
+        question: {
+            text: string;
+            alternatives: Array<{
+                letter: string;
+                text: string;
+            }>;
+        };
+        answer: {
+            letter: string | null;
+            text: string | null;
+            explanation: string | null;
+            source: 'official_gabarito' | 'not_found';
+        };
+        classification?: {
+            area?: string;
+            subarea?: string;
+            theme?: string;
+            difficulty?: 'easy' | 'medium' | 'hard';
+            keywords?: string[];
+        };
+        processing: {
+            status: 'classified' | 'classification_error';
+            error: string | null;
+        };
+    }>;
 }
 export declare class UpdateQuestionUseCase {
-    private readonly questionsRawRepository;
-    constructor(questionsRawRepository: QuestionsRawRepositoryPort);
-    execute(request: UpdateQuestionRequest): Promise<Result<QuestionRaw>>;
+    private readonly questionsProcessingRepository;
+    constructor(questionsProcessingRepository: QuestionsProcessingRepositoryPort);
+    execute(request: UpdateQuestionRequest): Promise<Result<QuestionProcessing>>;
 }

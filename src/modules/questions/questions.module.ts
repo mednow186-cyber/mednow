@@ -8,16 +8,22 @@ import { AmqpQueueAdapter } from './adapters/amqp/amqp-queue.adapter';
 import { AmqpQueueConsumerAdapter } from './adapters/amqp/amqp-queue-consumer.adapter';
 import { OpenAiGptAdapter } from './adapters/openai/openai-gpt.adapter';
 import { MongoQuestionsRawRepositoryAdapter } from './adapters/mongo/mongo-questions-raw-repository.adapter';
+import { MongoQuestionsProcessingRepositoryAdapter } from './adapters/mongo/mongo-questions-processing-repository.adapter';
 import { NestLoggerAdapter } from './adapters/logger/nest-logger.adapter';
 import { QueuePort } from './core/application/ports/queue.port';
 import { QueueConsumerPort } from './core/application/ports/queue-consumer.port';
 import { GptServicePort } from './core/application/ports/gpt-service.port';
 import { QuestionsRawRepositoryPort } from './core/application/ports/questions-raw-repository.port';
+import { QuestionsProcessingRepositoryPort } from './core/application/ports/questions-processing-repository.port';
 import { Logger } from '../../building-blocks/observability/logger.interface';
 import {
   QuestionRaw,
   QuestionRawSchema,
 } from './adapters/mongo/schemas/question-raw.schema';
+import {
+  QuestionProcessing,
+  QuestionProcessingSchema,
+} from './adapters/mongo/schemas/question-processing.schema';
 import { QuestionsConsumerService } from './questions-consumer.service';
 
 @Module({
@@ -25,6 +31,10 @@ import { QuestionsConsumerService } from './questions-consumer.service';
     MongooseModule.forFeature([
       { name: QuestionRaw.name, schema: QuestionRawSchema },
     ]),
+    MongooseModule.forFeature(
+      [{ name: QuestionProcessing.name, schema: QuestionProcessingSchema }],
+      'questions_db',
+    ),
   ],
   providers: [
     ProcessQuestionsUseCase,
@@ -53,6 +63,10 @@ import { QuestionsConsumerService } from './questions-consumer.service';
     {
       provide: 'QuestionsRawRepositoryPort',
       useClass: MongoQuestionsRawRepositoryAdapter,
+    },
+    {
+      provide: 'QuestionsProcessingRepositoryPort',
+      useClass: MongoQuestionsProcessingRepositoryAdapter,
     },
     {
       provide: 'Logger',

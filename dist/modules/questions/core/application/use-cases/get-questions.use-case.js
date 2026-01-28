@@ -16,12 +16,12 @@ exports.GetQuestionsUseCase = void 0;
 const common_1 = require("@nestjs/common");
 const result_1 = require("../../../../../building-blocks/result/result");
 let GetQuestionsUseCase = class GetQuestionsUseCase {
-    constructor(questionsRawRepository) {
-        this.questionsRawRepository = questionsRawRepository;
+    constructor(questionsProcessingRepository) {
+        this.questionsProcessingRepository = questionsProcessingRepository;
     }
     async findAll() {
         try {
-            const questions = await this.questionsRawRepository.findAll();
+            const questions = await this.questionsProcessingRepository.findAll();
             return result_1.Result.ok(questions);
         }
         catch (error) {
@@ -35,7 +35,7 @@ let GetQuestionsUseCase = class GetQuestionsUseCase {
             return result_1.Result.fail(new Error('Invalid id provided'));
         }
         try {
-            const question = await this.questionsRawRepository.findById(id);
+            const question = await this.questionsProcessingRepository.findById(id);
             return result_1.Result.ok(question);
         }
         catch (error) {
@@ -48,7 +48,7 @@ let GetQuestionsUseCase = class GetQuestionsUseCase {
 exports.GetQuestionsUseCase = GetQuestionsUseCase;
 exports.GetQuestionsUseCase = GetQuestionsUseCase = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, common_1.Inject)('QuestionsRawRepositoryPort')),
+    __param(0, (0, common_1.Inject)('QuestionsProcessingRepositoryPort')),
     __metadata("design:paramtypes", [Object])
 ], GetQuestionsUseCase);
 //# sourceMappingURL=get-questions.use-case.js.map

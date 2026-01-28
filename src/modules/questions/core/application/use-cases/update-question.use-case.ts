@@ -1,34 +1,64 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Result } from '../../../../../building-blocks/result/result';
 import {
-  QuestionsRawRepositoryPort,
-  QuestionRaw,
-} from '../ports/questions-raw-repository.port';
+  QuestionsProcessingRepositoryPort,
+  QuestionProcessing,
+} from '../ports/questions-processing-repository.port';
 
 export interface UpdateQuestionRequest {
   id: string;
-  imageUrl?: string;
-  sourceType?: 'image' | 'pdf';
-  originalPayload?: Record<string, unknown>;
-  gptResponse?: unknown;
-  status?: 'pending_review' | 'approved';
+  source?: string;
+  raw_text?: string;
+  processing?: {
+    status?: 'pending' | 'classified' | 'partial';
+    classifiedAt?: Date;
+    model?: string;
+  };
+  questions?: Array<{
+    questionNumber: number;
+    type: 'multiple_choice' | 'descriptive';
+    question: {
+      text: string;
+      alternatives: Array<{
+        letter: string;
+        text: string;
+      }>;
+    };
+    answer: {
+      letter: string | null;
+      text: string | null;
+      explanation: string | null;
+      source: 'official_gabarito' | 'not_found';
+    };
+    classification?: {
+      area?: string;
+      subarea?: string;
+      theme?: string;
+      difficulty?: 'easy' | 'medium' | 'hard';
+      keywords?: string[];
+    };
+    processing: {
+      status: 'classified' | 'classification_error';
+      error: string | null;
+    };
+  }>;
 }
 
 @Injectable()
 export class UpdateQuestionUseCase {
   constructor(
-    @Inject('QuestionsRawRepositoryPort')
-    private readonly questionsRawRepository: QuestionsRawRepositoryPort,
+    @Inject('QuestionsProcessingRepositoryPort')
+    private readonly questionsProcessingRepository: QuestionsProcessingRepositoryPort,
   ) {}
 
   async execute(
     request: UpdateQuestionRequest,
-  ): Promise<Result<QuestionRaw>> {
+  ): Promise<Result<QuestionProcessing>> {
     if (!request.id || typeof request.id !== 'string') {
       return Result.fail(new Error('Invalid id provided'));
     }
 
-    const existingQuestion = await this.questionsRawRepository.findById(
+    const existingQuestion = await this.questionsProcessingRepository.findById(
       request.id,
     );
 
@@ -36,56 +66,41 @@ export class UpdateQuestionUseCase {
       return Result.fail(new Error('Question not found'));
     }
 
-    const updates: Partial<QuestionRaw> = {};
+    const updates: Partial<QuestionProcessing> = {};
 
-    if (request.imageUrl !== undefined) {
-      if (typeof request.imageUrl !== 'string') {
-        return Result.fail(new Error('imageUrl must be a string'));
+    if (request.source !== undefined) {
+      if (typeof request.source !== 'string') {
+        return Result.fail(new Error('source must be a string'));
       }
-      updates.imageUrl = request.imageUrl;
+      updates.source = request.source;
     }
 
-    if (request.sourceType !== undefined) {
-      if (!['image', 'pdf'].includes(request.sourceType)) {
-        return Result.fail(
-          new Error('sourceType must be either "image" or "pdf"'),
-        );
+    if (request.raw_text !== undefined) {
+      if (typeof request.raw_text !== 'string') {
+        return Result.fail(new Error('raw_text must be a string'));
       }
-      updates.sourceType = request.sourceType;
+      updates.raw_text = request.raw_text;
     }
 
-    if (request.originalPayload !== undefined) {
-      if (typeof request.originalPayload !== 'object') {
-        return Result.fail(new Error('originalPayload must be an object'));
+    if (request.processing !== undefined) {
+      if (typeof request.processing !== 'object') {
+        return Result.fail(new Error('processing must be an object'));
       }
-      updates.originalPayload = request.originalPayload;
+      updates.processing = {
+        ...existingQuestion.processing,
+        ...request.processing,
+      };
     }
 
-    if (request.gptResponse !== undefined) {
-      updates.gptResponse = request.gptResponse;
-    }
-
-    if (request.status !== undefined && request.status !== null) {
-      if (typeof request.status !== 'string') {
-        return Result.fail(
-          new Error('status must be a string'),
-        );
+    if (request.questions !== undefined) {
+      if (!Array.isArray(request.questions)) {
+        return Result.fail(new Error('questions must be an array'));
       }
-      if (request.status.trim() === '') {
-        return Result.fail(
-          new Error('status cannot be empty'),
-        );
-      }
-      if (!['pending_review', 'approved'].includes(request.status)) {
-        return Result.fail(
-          new Error('status must be either "pending_review" or "approved"'),
-        );
-      }
-      updates.status = request.status as 'pending_review' | 'approved';
+      updates.questions = request.questions;
     }
 
     try {
-      const updatedQuestion = await this.questionsRawRepository.update(
+      const updatedQuestion = await this.questionsProcessingRepository.update(
         request.id,
         updates,
       );

@@ -1,46 +1,82 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { GptResponseDto } from './question-raw-response.dto';
+
+export class ProcessingStatusUpdateDto {
+  @ApiProperty({
+    description: 'Status do processamento',
+    enum: ['pending', 'classified', 'partial'],
+    required: false,
+    example: 'classified',
+  })
+  status?: 'pending' | 'classified' | 'partial';
+
+  @ApiProperty({
+    description: 'Data de classificação',
+    required: false,
+    example: '2026-01-18T17:18:15.074Z',
+  })
+  classifiedAt?: Date;
+
+  @ApiProperty({
+    description: 'Modelo usado para classificação',
+    required: false,
+    example: 'gpt-4o',
+  })
+  model?: string;
+}
 
 export class UpdateQuestionRequestDto {
   @ApiProperty({
-    description: 'URL da imagem da questão',
+    description: 'Fonte da questão (URL da imagem)',
     required: false,
     example: 'https://example.com/image.png',
   })
-  imageUrl?: string;
+  source?: string;
 
   @ApiProperty({
-    description: 'Tipo da fonte',
-    enum: ['image', 'pdf'],
+    description: 'Texto bruto extraído',
     required: false,
-    example: 'image',
+    example: 'Raw text extracted from the image...',
   })
-  sourceType?: 'image' | 'pdf';
+  raw_text?: string;
 
   @ApiProperty({
-    description: 'Payload original da requisição',
-    type: Object,
+    description: 'Status do processamento',
+    type: ProcessingStatusUpdateDto,
     required: false,
-    example: {
-      imageUrl: 'https://example.com/image.png',
-      content: 'Conteúdo atualizado',
-      notes: 'Notas atualizadas',
-    },
   })
-  originalPayload?: Record<string, unknown>;
+  processing?: ProcessingStatusUpdateDto;
 
   @ApiProperty({
-    description: 'Resposta do GPT processada',
-    type: Object,
+    description: 'Lista de questões processadas',
+    type: Array,
     required: false,
   })
-  gptResponse?: GptResponseDto;
-
-  @ApiProperty({
-    description: 'Status da questão',
-    enum: ['pending_review', 'approved'],
-    required: false,
-    example: 'pending_review',
-  })
-  status?: 'pending_review' | 'approved';
+  questions?: Array<{
+    questionNumber: number;
+    type: 'multiple_choice' | 'descriptive';
+    question: {
+      text: string;
+      alternatives: Array<{
+        letter: string;
+        text: string;
+      }>;
+    };
+    answer: {
+      letter: string | null;
+      text: string | null;
+      explanation: string | null;
+      source: 'official_gabarito' | 'not_found';
+    };
+    classification?: {
+      area?: string;
+      subarea?: string;
+      theme?: string;
+      difficulty?: 'easy' | 'medium' | 'hard';
+      keywords?: string[];
+    };
+    processing: {
+      status: 'classified' | 'classification_error';
+      error: string | null;
+    };
+  }>;
 }

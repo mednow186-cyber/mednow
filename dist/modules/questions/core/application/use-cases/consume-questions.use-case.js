@@ -36,9 +36,10 @@ function identifyFileType(imageUrl) {
     }
 }
 let ConsumeQuestionsUseCase = class ConsumeQuestionsUseCase {
-    constructor(gptService, repository, logger) {
+    constructor(gptService, rawRepository, processingRepository, logger) {
         this.gptService = gptService;
-        this.repository = repository;
+        this.rawRepository = rawRepository;
+        this.processingRepository = processingRepository;
         this.logger = logger;
     }
     async execute(message) {
@@ -53,7 +54,7 @@ let ConsumeQuestionsUseCase = class ConsumeQuestionsUseCase {
                 content: message.content,
                 notes: message.notes,
             });
-            await this.repository.save({
+            await this.rawRepository.save({
                 correlationId,
                 imageUrl: message.imageUrl,
                 sourceType,
@@ -70,6 +71,16 @@ let ConsumeQuestionsUseCase = class ConsumeQuestionsUseCase {
                 gptResponse: gptResponse.content,
                 status: 'pending_review',
                 createdAt: new Date(),
+            });
+            const rawText = this.extractRawText(gptResponse.content);
+            const questions = this.extractQuestions(gptResponse.content);
+            await this.processingRepository.save({
+                source: message.imageUrl,
+                raw_text: rawText,
+                processing: {
+                    status: 'pending',
+                },
+                questions: questions,
             });
             this.logger.info(`Question processed successfully: correlationId=${correlationId}`, 'ConsumeQuestionsUseCase');
         }
@@ -94,12 +105,151 @@ let ConsumeQuestionsUseCase = class ConsumeQuestionsUseCase {
             throw error;
         }
     }
+    extractRawText(gptContent) {
+        if (typeof gptContent === 'object' && gptContent !== null) {
+            const content = gptContent;
+            if (typeof content.raw_text === 'string') {
+                return content.raw_text;
+            }
+            if (typeof content.text === 'string') {
+                return content.text;
+            }
+            return JSON.stringify(gptContent);
+        }
+        if (typeof gptContent === 'string') {
+            return gptContent;
+        }
+        return String(gptContent);
+    }
+    extractQuestions(gptContent) {
+        if (typeof gptContent !== 'object' || gptContent === null) {
+            return [];
+        }
+        const content = gptContent;
+        if (Array.isArray(content.questions)) {
+            return content.questions.map((q, index) => {
+                const question = q;
+                return {
+                    questionNumber: typeof question.questionNumber === 'number'
+                        ? question.questionNumber
+                        : index + 1,
+                    type: question.type === 'descriptive'
+                        ? 'descriptive'
+                        : 'multiple_choice',
+                    question: (() => {
+                        const questionObj = question.question;
+                        const questionText = questionObj && typeof questionObj.text === 'string'
+                            ? questionObj.text
+                            : typeof question.text === 'string'
+                                ? question.text
+                                : '';
+                        const alternatives = Array.isArray(question.alternatives)
+                            ? question.alternatives
+                            : questionObj && Array.isArray(questionObj.alternatives)
+                                ? questionObj.alternatives
+                                : [];
+                        return {
+                            text: questionText,
+                            alternatives: alternatives.map((alt) => {
+                                const alternative = alt;
+                                return {
+                                    letter: typeof alternative.letter === 'string'
+                                        ? alternative.letter
+                                        : '',
+                                    text: typeof alternative.text === 'string'
+                                        ? alternative.text
+                                        : '',
+                                };
+                            }),
+                        };
+                    })(),
+                    answer: (() => {
+                        const answerObj = question.answer;
+                        if (typeof answerObj === 'string') {
+                            return {
+                                letter: answerObj,
+                                text: null,
+                                explanation: null,
+                                source: 'not_found',
+                            };
+                        }
+                        if (answerObj && typeof answerObj === 'object') {
+                            return {
+                                letter: typeof answerObj.letter === 'string'
+                                    ? answerObj.letter
+                                    : null,
+                                text: typeof answerObj.text === 'string'
+                                    ? answerObj.text
+                                    : null,
+                                explanation: typeof answerObj.explanation === 'string'
+                                    ? answerObj.explanation
+                                    : null,
+                                source: typeof answerObj.source === 'string' &&
+                                    (answerObj.source === 'official_gabarito' ||
+                                        answerObj.source === 'not_found')
+                                    ? answerObj.source
+                                    : 'not_found',
+                            };
+                        }
+                        return {
+                            letter: null,
+                            text: null,
+                            explanation: null,
+                            source: 'not_found',
+                        };
+                    })(),
+                    classification: (() => {
+                        const classificationObj = question.classification;
+                        if (!classificationObj || typeof classificationObj !== 'object') {
+                            return undefined;
+                        }
+                        return {
+                            area: typeof classificationObj.area === 'string'
+                                ? classificationObj.area
+                                : undefined,
+                            subarea: typeof classificationObj.subarea === 'string'
+                                ? classificationObj.subarea
+                                : undefined,
+                            theme: typeof classificationObj.theme === 'string'
+                                ? classificationObj.theme
+                                : undefined,
+                            difficulty: classificationObj.difficulty === 'easy' ||
+                                classificationObj.difficulty === 'medium' ||
+                                classificationObj.difficulty === 'hard'
+                                ? classificationObj.difficulty
+                                : undefined,
+                            keywords: Array.isArray(classificationObj.keywords)
+                                ? classificationObj.keywords.filter((k) => typeof k === 'string')
+                                : undefined,
+                        };
+                    })(),
+                    processing: (() => {
+                        const processingObj = question.processing;
+                        return {
+                            status: processingObj &&
+                                typeof processingObj === 'object' &&
+                                processingObj.status === 'classification_error'
+                                ? 'classification_error'
+                                : 'classified',
+                            error: processingObj &&
+                                typeof processingObj === 'object' &&
+                                typeof processingObj.error === 'string'
+                                ? processingObj.error
+                                : null,
+                        };
+                    })(),
+                };
+            });
+        }
+        return [];
+    }
 };
 exports.ConsumeQuestionsUseCase = ConsumeQuestionsUseCase;
 exports.ConsumeQuestionsUseCase = ConsumeQuestionsUseCase = __decorate([
     __param(0, (0, common_1.Inject)('GptServicePort')),
     __param(1, (0, common_1.Inject)('QuestionsRawRepositoryPort')),
-    __param(2, (0, common_1.Inject)('Logger')),
-    __metadata("design:paramtypes", [Object, Object, Object])
+    __param(2, (0, common_1.Inject)('QuestionsProcessingRepositoryPort')),
+    __param(3, (0, common_1.Inject)('Logger')),
+    __metadata("design:paramtypes", [Object, Object, Object, Object])
 ], ConsumeQuestionsUseCase);
 //# sourceMappingURL=consume-questions.use-case.js.map

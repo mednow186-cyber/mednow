@@ -16,53 +16,47 @@ exports.UpdateQuestionUseCase = void 0;
 const common_1 = require("@nestjs/common");
 const result_1 = require("../../../../../building-blocks/result/result");
 let UpdateQuestionUseCase = class UpdateQuestionUseCase {
-    constructor(questionsRawRepository) {
-        this.questionsRawRepository = questionsRawRepository;
+    constructor(questionsProcessingRepository) {
+        this.questionsProcessingRepository = questionsProcessingRepository;
     }
     async execute(request) {
         if (!request.id || typeof request.id !== 'string') {
             return result_1.Result.fail(new Error('Invalid id provided'));
         }
-        const existingQuestion = await this.questionsRawRepository.findById(request.id);
+        const existingQuestion = await this.questionsProcessingRepository.findById(request.id);
         if (!existingQuestion) {
             return result_1.Result.fail(new Error('Question not found'));
         }
         const updates = {};
-        if (request.imageUrl !== undefined) {
-            if (typeof request.imageUrl !== 'string') {
-                return result_1.Result.fail(new Error('imageUrl must be a string'));
+        if (request.source !== undefined) {
+            if (typeof request.source !== 'string') {
+                return result_1.Result.fail(new Error('source must be a string'));
             }
-            updates.imageUrl = request.imageUrl;
+            updates.source = request.source;
         }
-        if (request.sourceType !== undefined) {
-            if (!['image', 'pdf'].includes(request.sourceType)) {
-                return result_1.Result.fail(new Error('sourceType must be either "image" or "pdf"'));
+        if (request.raw_text !== undefined) {
+            if (typeof request.raw_text !== 'string') {
+                return result_1.Result.fail(new Error('raw_text must be a string'));
             }
-            updates.sourceType = request.sourceType;
+            updates.raw_text = request.raw_text;
         }
-        if (request.originalPayload !== undefined) {
-            if (typeof request.originalPayload !== 'object') {
-                return result_1.Result.fail(new Error('originalPayload must be an object'));
+        if (request.processing !== undefined) {
+            if (typeof request.processing !== 'object') {
+                return result_1.Result.fail(new Error('processing must be an object'));
             }
-            updates.originalPayload = request.originalPayload;
+            updates.processing = {
+                ...existingQuestion.processing,
+                ...request.processing,
+            };
         }
-        if (request.gptResponse !== undefined) {
-            updates.gptResponse = request.gptResponse;
-        }
-        if (request.status !== undefined && request.status !== null) {
-            if (typeof request.status !== 'string') {
-                return result_1.Result.fail(new Error('status must be a string'));
+        if (request.questions !== undefined) {
+            if (!Array.isArray(request.questions)) {
+                return result_1.Result.fail(new Error('questions must be an array'));
             }
-            if (request.status.trim() === '') {
-                return result_1.Result.fail(new Error('status cannot be empty'));
-            }
-            if (!['pending_review', 'approved'].includes(request.status)) {
-                return result_1.Result.fail(new Error('status must be either "pending_review" or "approved"'));
-            }
-            updates.status = request.status;
+            updates.questions = request.questions;
         }
         try {
-            const updatedQuestion = await this.questionsRawRepository.update(request.id, updates);
+            const updatedQuestion = await this.questionsProcessingRepository.update(request.id, updates);
             if (!updatedQuestion) {
                 return result_1.Result.fail(new Error('Failed to update question'));
             }
@@ -78,7 +72,7 @@ let UpdateQuestionUseCase = class UpdateQuestionUseCase {
 exports.UpdateQuestionUseCase = UpdateQuestionUseCase;
 exports.UpdateQuestionUseCase = UpdateQuestionUseCase = __decorate([
     (0, common_1.Injectable)(),
-    __param(0, (0, common_1.Inject)('QuestionsRawRepositoryPort')),
+    __param(0, (0, common_1.Inject)('QuestionsProcessingRepositoryPort')),
     __metadata("design:paramtypes", [Object])
 ], UpdateQuestionUseCase);
 //# sourceMappingURL=update-question.use-case.js.map

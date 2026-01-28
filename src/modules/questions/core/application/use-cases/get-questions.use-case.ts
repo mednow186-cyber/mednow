@@ -1,17 +1,20 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Result } from '../../../../../building-blocks/result/result';
-import { QuestionsRawRepositoryPort, QuestionRaw } from '../ports/questions-raw-repository.port';
+import {
+  QuestionsProcessingRepositoryPort,
+  QuestionProcessing,
+} from '../ports/questions-processing-repository.port';
 
 @Injectable()
 export class GetQuestionsUseCase {
   constructor(
-    @Inject('QuestionsRawRepositoryPort')
-    private readonly questionsRawRepository: QuestionsRawRepositoryPort,
+    @Inject('QuestionsProcessingRepositoryPort')
+    private readonly questionsProcessingRepository: QuestionsProcessingRepositoryPort,
   ) {}
 
-  async findAll(): Promise<Result<QuestionRaw[]>> {
+  async findAll(): Promise<Result<QuestionProcessing[]>> {
     try {
-      const questions = await this.questionsRawRepository.findAll();
+      const questions = await this.questionsProcessingRepository.findAll();
       return Result.ok(questions);
     } catch (error) {
       return Result.fail(
@@ -22,13 +25,13 @@ export class GetQuestionsUseCase {
     }
   }
 
-  async findById(id: string): Promise<Result<QuestionRaw | null>> {
+  async findById(id: string): Promise<Result<QuestionProcessing | null>> {
     if (!id || typeof id !== 'string') {
       return Result.fail(new Error('Invalid id provided'));
     }
 
     try {
-      const question = await this.questionsRawRepository.findById(id);
+      const question = await this.questionsProcessingRepository.findById(id);
       return Result.ok(question);
     } catch (error) {
       return Result.fail(
